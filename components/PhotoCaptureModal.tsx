@@ -1,9 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera, Upload, X } from 'lucide-react';
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Camera, Upload, X } from "lucide-react";
 
 interface PhotoCaptureModalProps {
   open: boolean;
@@ -11,9 +16,13 @@ interface PhotoCaptureModalProps {
   onPhotoCapture: (photoData: string) => void;
 }
 
-export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }: PhotoCaptureModalProps) {
+export default function PhotoCaptureModal({
+  open,
+  onOpenChange,
+  onPhotoCapture,
+}: PhotoCaptureModalProps) {
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  const [mode, setMode] = useState<'capture' | 'upload'>('capture');
+  const [mode, setMode] = useState<"capture" | "upload">("capture");
   const [cameraActive, setCameraActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -23,7 +32,7 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
 
   // Start camera when dialog opens and mode is capture
   useEffect(() => {
-    if (open && mode === 'capture' && !cameraActive) {
+    if (open && mode === "capture" && !cameraActive) {
       startCamera();
     }
     return () => {
@@ -36,33 +45,34 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
   const startCamera = async () => {
     try {
       setError(null);
-      console.log('[v0] Requesting camera access...');
+      console.log("[v0] Requesting camera access...");
       const constraints = {
         video: {
-          facingMode: 'user',
+          facingMode: "user",
           width: { ideal: 1280 },
-          height: { ideal: 720 }
+          height: { ideal: 720 },
         },
-        audio: false
+        audio: false,
       };
-      
+
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = () => {
-          console.log('[v0] Camera stream loaded');
-          videoRef.current?.play().catch(err => {
-            console.error('[v0] Error playing video:', err);
+          console.log("[v0] Camera stream loaded");
+          videoRef.current?.play().catch((err) => {
+            console.error("[v0] Error playing video:", err);
           });
         };
         setCameraActive(true);
-        console.log('[v0] Camera started successfully');
+        console.log("[v0] Camera started successfully");
       }
     } catch (error) {
-      console.error('[v0] Camera access error:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Unable to access camera';
+      console.error("[v0] Camera access error:", error);
+      const errorMsg =
+        error instanceof Error ? error.message : "Unable to access camera";
       setError(`Camera Error: ${errorMsg}. Please check your permissions.`);
       setCameraActive(false);
     }
@@ -71,29 +81,29 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
   const capturePhoto = () => {
     if (canvasRef.current && videoRef.current) {
       try {
-        const context = canvasRef.current.getContext('2d');
+        const context = canvasRef.current.getContext("2d");
         if (context) {
           canvasRef.current.width = videoRef.current.videoWidth;
           canvasRef.current.height = videoRef.current.videoHeight;
           context.drawImage(videoRef.current, 0, 0);
-          const photoData = canvasRef.current.toDataURL('image/jpeg', 0.95);
+          const photoData = canvasRef.current.toDataURL("image/jpeg", 0.95);
           setCapturedPhoto(photoData);
-          console.log('[v0] Photo captured successfully');
+          console.log("[v0] Photo captured successfully");
           stopCamera();
         }
       } catch (err) {
-        console.error('[v0] Error capturing photo:', err);
-        setError('Failed to capture photo. Please try again.');
+        console.error("[v0] Error capturing photo:", err);
+        setError("Failed to capture photo. Please try again.");
       }
     }
   };
 
   const stopCamera = () => {
-    console.log('[v0] Stopping camera');
+    console.log("[v0] Stopping camera");
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
+      streamRef.current.getTracks().forEach((track) => {
         track.stop();
-        console.log('[v0] Camera track stopped');
+        console.log("[v0] Camera track stopped");
       });
       streamRef.current = null;
     }
@@ -111,12 +121,12 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
         reader.onload = (event) => {
           const photoData = event.target?.result as string;
           setCapturedPhoto(photoData);
-          console.log('[v0] File uploaded successfully');
+          console.log("[v0] File uploaded successfully");
         };
         reader.readAsDataURL(file);
       } catch (err) {
-        console.error('[v0] Error uploading file:', err);
-        setError('Failed to upload photo. Please try again.');
+        console.error("[v0] Error uploading file:", err);
+        setError("Failed to upload photo. Please try again.");
       }
     }
   };
@@ -125,19 +135,24 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
     if (capturedPhoto) {
       onPhotoCapture(capturedPhoto);
       setCapturedPhoto(null);
-      setMode('capture');
+      setError(null);
+      setMode("capture");
       onOpenChange(false);
     }
   };
 
-  const discardPhoto = () => {
+  const retakePhoto = async () => {
     setCapturedPhoto(null);
+    setMode("capture");
+    setError(null);
+    setCameraActive(false);
+    await startCamera();
   };
 
   const handleClose = () => {
     stopCamera();
     setCapturedPhoto(null);
-    setMode('capture');
+    setMode("capture");
     setError(null);
     onOpenChange(false);
   };
@@ -146,7 +161,9 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md bg-slate-800 border-slate-700">
         <DialogHeader>
-          <DialogTitle className="text-white">Capture Staff Photo</DialogTitle>
+          <DialogTitle className="text-white mb-4">
+            Capture Staff Photo
+          </DialogTitle>
         </DialogHeader>
 
         {!capturedPhoto ? (
@@ -156,8 +173,8 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
                 {error}
               </div>
             )}
-            
-            {mode === 'capture' ? (
+
+            {mode === "capture" ? (
               <div className="space-y-4">
                 <div className="relative bg-slate-900 rounded-lg overflow-hidden w-full aspect-video flex items-center justify-center">
                   <video
@@ -169,7 +186,9 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
                   {!cameraActive && !error && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80">
                       <Camera className="h-12 w-12 text-slate-500 mb-2" />
-                      <p className="text-slate-400 text-sm">Initializing camera...</p>
+                      <p className="text-slate-400 text-sm">
+                        Initializing camera...
+                      </p>
                     </div>
                   )}
                 </div>
@@ -177,15 +196,18 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
                   <Button
                     onClick={capturePhoto}
                     disabled={!cameraActive}
-                    className="flex-1 bg-accent hover:bg-accent/90 text-black font-medium disabled:opacity-50"
+                    className="flex-1 cursor-pointer bg-accent hover:bg-accent/90 text-black font-medium disabled:opacity-50"
                   >
-                    <Camera className="h-4 w-4 mr-2" />
+                    <Camera className=" h-4 w-4 mr-2" />
                     Capture Photo
                   </Button>
                   <Button
-                    onClick={() => { stopCamera(); setMode('upload'); }}
+                    onClick={() => {
+                      stopCamera();
+                      setMode("upload");
+                    }}
                     variant="outline"
-                    className="flex-1 border-slate-600 text-slate-200 hover:bg-slate-700"
+                    className="flex-1 cursor-pointer border-slate-600 text-slate-200 hover:bg-slate-700"
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     Upload
@@ -203,15 +225,18 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
                 />
                 <Button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full bg-accent hover:bg-accent/90 text-black font-medium"
+                  className="w-full bg-accent cursor-pointer hover:bg-accent/90 text-black font-medium"
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Select Photo from Device
                 </Button>
                 <Button
-                  onClick={() => { setMode('capture'); startCamera(); }}
+                  onClick={() => {
+                    setMode("capture");
+                    startCamera();
+                  }}
                   variant="outline"
-                  className="w-full border-slate-600 text-slate-200 hover:bg-slate-700"
+                  className="w-full cursor-pointer border-slate-600 text-slate-200 hover:bg-slate-700"
                 >
                   <Camera className="h-4 w-4 mr-2" />
                   Back to Camera
@@ -222,18 +247,22 @@ export default function PhotoCaptureModal({ open, onOpenChange, onPhotoCapture }
           </div>
         ) : (
           <div className="space-y-4">
-            <img src={capturedPhoto} alt="Captured photo" className="w-full rounded-lg border-2 border-accent" />
+            <img
+              src={capturedPhoto}
+              alt="Captured photo"
+              className="w-full rounded-lg border-2 border-accent"
+            />
             <div className="flex gap-2">
               <Button
                 onClick={confirmPhoto}
-                className="flex-1 bg-accent hover:bg-accent/90 text-black font-medium"
+                className="flex-1 cursor-pointer bg-accent hover:bg-accent/90 text-black font-medium"
               >
                 Use Photo
               </Button>
               <Button
-                onClick={discardPhoto}
+                onClick={retakePhoto}
                 variant="outline"
-                className="flex-1 border-slate-600 text-slate-200 hover:bg-slate-700"
+                className="flex-1 cursor-pointer border-slate-600 text-slate-200 hover:bg-slate-700"
               >
                 Retake
               </Button>

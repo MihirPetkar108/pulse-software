@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Upload, Trash2, File } from 'lucide-react';
+import { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Upload, Trash2, File } from "lucide-react";
 
 interface DocumentFile {
   id: string;
@@ -20,19 +20,43 @@ interface DocumentUploadAreaProps {
   acceptedFormats?: string;
 }
 
-export default function DocumentUploadArea({ 
-  onFilesSelected, 
+export default function DocumentUploadArea({
+  onFilesSelected,
   maxFiles = 5,
-  acceptedFormats = '.pdf,.doc,.docx,.jpg,.jpeg,.png'
+  acceptedFormats = ".pdf,.doc,.docx,.jpg,.jpeg,.png",
 }: DocumentUploadAreaProps) {
   const [uploadedFiles, setUploadedFiles] = useState<DocumentFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = (files: FileList) => {
+    setError("");
+
+    if (uploadedFiles.length >= maxFiles) {
+      setError(`Maximum upload limit reached (${maxFiles}/${maxFiles})`);
+      return;
+    }
+
     const newFiles: DocumentFile[] = [];
-    
-    for (let i = 0; i < Math.min(files.length, maxFiles - uploadedFiles.length); i++) {
+
+    const allowedFormats = acceptedFormats
+      .split(",")
+      .map((format) => format.trim().toLowerCase());
+
+    for (
+      let i = 0;
+      i < Math.min(files.length, maxFiles - uploadedFiles.length);
+      i++
+    ) {
       const file = files[i];
+      const fileExtension = `.${file.name.split(".").pop()?.toLowerCase()}`;
+
+      if (!allowedFormats.includes(fileExtension)) {
+        setError(`File type not supported: ${file.name}`);
+        continue;
+      }
+
       newFiles.push({
         id: `${Date.now()}-${Math.random()}`,
         name: file.name,
@@ -41,6 +65,10 @@ export default function DocumentUploadArea({
         url: URL.createObjectURL(file),
         file: file,
       });
+    }
+
+    if (uploadedFiles.length + files.length > maxFiles) {
+      setError(`Only ${maxFiles} files are allowed`);
     }
 
     const combined = [...uploadedFiles, ...newFiles];
@@ -64,26 +92,26 @@ export default function DocumentUploadArea({
   };
 
   const removeFile = (id: string) => {
-    const updated = uploadedFiles.filter(f => f.id !== id);
+    const updated = uploadedFiles.filter((f) => f.id !== id);
     setUploadedFiles(updated);
     onFilesSelected(updated);
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
+    const sizes = ["Bytes", "KB", "MB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
   return (
     <div className="space-y-4">
-      <Card 
+      <Card
         className={`border-2 border-dashed transition-colors cursor-pointer ${
-          isDragging 
-            ? 'border-blue-500 bg-blue-50' 
-            : 'border-slate-300 hover:border-slate-400'
+          isDragging
+            ? "border-blue-500 bg-blue-50"
+            : "border-slate-300 hover:border-slate-400"
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -101,17 +129,31 @@ export default function DocumentUploadArea({
             type="file"
             multiple
             accept={acceptedFormats}
-            onChange={(e) => e.target.files && handleFiles(e.target.files)}
             className="hidden"
             id="document-upload"
+            ref={fileInputRef}
+            onChange={(e) => {
+              if (e.target.files) {
+                handleFiles(e.target.files);
+                e.target.value = "";
+              }
+            }}
           />
-          <label htmlFor="document-upload">
-            <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
-              <span>Select Files</span>
-            </Button>
-          </label>
+          <Button
+            type="button"
+            className="bg-blue-600 cursor-pointer hover:bg-blue-700 text-white"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <span>Select Files</span>
+          </Button>
         </CardContent>
       </Card>
+
+      {error && (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400 font-medium">
+          {error}
+        </div>
+      )}
 
       {uploadedFiles.length > 0 && (
         <div className="space-y-2">
@@ -135,7 +177,7 @@ export default function DocumentUploadArea({
                 </div>
                 <button
                   onClick={() => removeFile(file.id)}
-                  className="p-1 hover:bg-slate-200 rounded transition-colors flex-shrink-0"
+                  className="p-1 cursor-pointer hover:bg-slate-200 rounded transition-colors flex-shrink-0"
                   title="Remove file"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />

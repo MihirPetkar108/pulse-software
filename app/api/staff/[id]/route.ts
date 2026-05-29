@@ -56,7 +56,7 @@ export async function GET(
       email: user.email || '',
       phone: user.phone || '',
       date_of_birth: user.date_of_birth || '1990-01-01',
-      role: user.role === 'manager' ? 'Supervisor' : user.role === 'hr' ? 'Manager' : 'Sanitation Worker',
+      role: user.designation || (user.role === 'manager' ? 'Supervisor' : user.role === 'hr' ? 'Manager' : 'Sanitation Worker'),
       department: user.department || 'Operations',
       hire_date: user.hire_date || user.created_at || new Date().toISOString(),
       status: user.status || 'Active',
